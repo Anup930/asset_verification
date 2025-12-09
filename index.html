@@ -1,4 +1,4 @@
-<!-- V2.1.0 -->
+<!-- V1.6.9 -->
 
 <!DOCTYPE html>
 <html>
@@ -8,7 +8,7 @@
     <title>Asset Verification App</title>
     <style>
       /* --- RESET & BASIC STYLING --- */
-      * { box-sizing: border-box; } /* Ensures padding doesn't break width */
+      * { box-sizing: border-box; }
       
       body { 
           font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
@@ -34,7 +34,6 @@
       h4 { color: #0056b3; margin-top: 25px; margin-bottom: 10px; font-size: 1.2rem; border-bottom: 1px solid #eee; padding-bottom: 5px;}
 
       /* --- FORM ELEMENTS --- */
-      /* larger font size (16px) prevents iOS from zooming in on input focus */
       input[type="text"], input[type="email"], select, input[type="file"] { 
           width: 100%; 
           padding: 12px; 
@@ -45,7 +44,7 @@
           background: #fff;
       }
       
-      /* File Input Styling for better touch targets */
+      /* File Input Styling */
       input[type="file"] {
           padding: 10px;
           background: #f8f9fa;
@@ -63,7 +62,7 @@
           font-size: 16px; 
           font-weight: 500;
           margin-top: 5px; 
-          width: 100%; /* Default to full width on mobile */
+          width: 100%; 
           transition: background-color 0.2s; 
       }
       button:active { transform: scale(0.98); }
@@ -111,7 +110,7 @@
       /* --- HEADER FLEX (User Info) --- */
       .header-flex {
           display: flex;
-          flex-direction: column; /* Stack on mobile */
+          flex-direction: column; 
           align-items: center;
           gap: 10px;
           text-align: center;
@@ -122,9 +121,9 @@
       .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 1000; overflow-y: auto; -webkit-overflow-scrolling: touch; }
       .modal-content { 
           background: #fff; 
-          margin: 10% auto; /* 10% from top */
+          margin: 10% auto; 
           padding: 25px; 
-          width: 90%; /* Responsive width */
+          width: 90%; 
           max-width: 500px; 
           border-radius: 12px; 
           position: relative; 
@@ -140,7 +139,7 @@
           background:rgba(255,255,255,0.9); 
           z-index:2000; 
           text-align: center; 
-          padding-top: 50vh; /* Center vertically */
+          padding-top: 50vh; 
           margin-top: -40px;
           font-size: 1.2rem; 
           font-weight: bold; 
@@ -150,19 +149,9 @@
       /* --- MEDIA QUERIES (TABLET & DESKTOP) --- */
       @media (min-width: 600px) {
           .container { padding: 40px; margin-top: 30px; }
-          
-          /* Side by side header on desktop */
-          .header-flex { 
-              flex-direction: row; 
-              justify-content: space-between; 
-              text-align: left;
-          }
-          
-          /* Buttons shouldn't be full width on desktop unless needed */
+          .header-flex { flex-direction: row; justify-content: space-between; text-align: left; }
           button { width: auto; min-width: 120px; }
           button.admin-btn { width: 100%; }
-          
-          /* Asset Card Buttons: Side by side */
           .card-actions { display: flex; gap: 10px; }
           .card-actions button { flex: 1; }
       }
@@ -245,13 +234,13 @@
             <h4 style="margin-top:0;">Verify Asset</h4>
             <p style="background: #e9ecef; padding: 10px; border-radius: 4px;"><strong>ID:</strong> <span id="asset_to_verify"></span></p>
             
-            <p style="font-size: 0.9rem; color: #555;">📸 <strong>Tip:</strong> Tap "Choose File" then select "Camera" to take a photo directly.</p>
+            <p style="font-size: 0.9rem; color: #555;">📸 <strong>Camera:</strong> Tapping below will open your camera.</p>
 
             <label>Front Photo:</label>
-            <input type="file" id="frontPic" accept="image/*" required>
+            <input type="file" id="frontPic" accept="image/*" capture="environment" required>
             
             <label>Back Photo (Serial No):</label>
-            <input type="file" id="backPic" accept="image/*" required>
+            <input type="file" id="backPic" accept="image/*" capture="environment" required>
             
             <button onclick="submitVerification()">Submit Verification</button>
             <button class="cancel-btn" onclick="closeModal('verificationModal')">Cancel</button>
@@ -294,10 +283,10 @@
             <input type="text" id="newAssetCompany" placeholder="e.g. Dell">
             
             <label>Front Photo:</label>
-            <input type="file" id="newAssetFrontPic" accept="image/*">
+            <input type="file" id="newAssetFrontPic" accept="image/*" capture="environment">
             
             <label>Back Photo:</label>
-            <input type="file" id="newAssetBackPic" accept="image/*">
+            <input type="file" id="newAssetBackPic" accept="image/*" capture="environment">
             
             <button class="add-btn" onclick="submitNewAsset()">Submit</button>
             <button class="cancel-btn" onclick="closeModal('addNewAssetModal')">Cancel</button>
@@ -335,7 +324,7 @@
 
     <script>
       // !!! PASTE YOUR APPS SCRIPT WEB APP URL HERE !!!
-      const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxZpL9D78TWaZw2CltEt48S49bBdX3iGpJ8nJSJFLhsOhzul0vlLl5WdDVC0RZtbpMW8g/exec";
+      const SCRIPT_URL = "Paste_Your_Web_App_Url_Here";
 
       /* --- GLOBAL VARS --- */
       let loggedInEmpId = '';
