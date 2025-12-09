@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <title>Asset Verification App</title>
+    <style>
+      /* --- SAME CSS AS BEFORE --- */
+      body { font-family: Arial, sans-serif; background-color: #f4f4f9; margin: 0; padding: 20px; color: #333; }
+      .container { max-width: 800px; margin: 0 auto; background: #fff; padding: 30px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); }
+      h2, h4 { color: #0056b3; text-align: center; border-bottom: 2px solid #eee; padding-bottom: 10px; }
+      input[type="text"], input[type="email"], input[type="file"], select { width: 100%; padding: 10px; margin: 8px 0 15px 0; display: inline-block; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+      
+      button { background-color: #007bff; color: white; padding: 10px 15px; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; margin-top: 5px; transition: background-color 0.3s ease; }
+      button:hover { background-color: #0056b3; }
+      
+      button.add-btn { background-color: #28a745; margin-right: 10px; }
+      button.add-btn:hover { background-color: #1e7e34; }
+      
+      /* Admin Specific Buttons */
+      button.admin-btn { background-color: #6f42c1; color: white; width: 100%; margin-bottom: 15px;}
+      button.admin-btn:hover { background-color: #59359a; }
+      
+      .error { color: red; margin-top: 10px; }
+      .success { color: green; margin-top: 10px; }
+      
+      .card { border: 1px solid #ddd; padding: 15px; margin-bottom: 15px; border-radius: 6px; background-color: #f9f9f9; }
+      .verified-card { background-color: #e6ffed; border-left: 5px solid #28a745; }
+      
+      .asset-list { margin-top: 20px; }
+      
+      /* Admin Banner */
+      .admin-banner {
+        background-color: #ffeb3b;
+        color: #333;
+        padding: 10px;
+        text-align: center;
+        border: 1px solid #e6db55;
+        border-radius: 4px;
+        margin-bottom: 20px;
+        display: none;
+      }
+
+      /* Modal Styles */
+      .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 1000; overflow: auto; }
+      .modal-content { background: #fff; margin: 5% auto; padding: 30px; width: 90%; max-width: 500px; border-radius: 8px; position: relative; }
+      
+      /* Loading Overlay */
+      #loadingOverlay { display:none; position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(255,255,255,0.8); z-index:2000; text-align: center; padding-top: 20%; font-size: 20px; font-weight: bold; color: #0056b3; }
+    </style>
+  </head>
+  <body>
+    <div id="loadingOverlay">Processing... Please wait.</div>
+
+    <div class="container">
+      <h2>Asset Verification System</h2>
+
+      <div id="phase1">
+        <p>Please enter your Employee ID to begin verification.</p>
+        <input type="text" id="empIdInput" placeholder="Enter Employee ID" required>
+        <button onclick="handleEmpIdCheck()">Check ID</button>
+        <div id="p1_message" class="error"></div>
+      </div>
+
+      <div id="phase2" style="display:none;">
+        <p>Confirm your details:</p>
+        <p><strong>Name:</strong> <span id="confirm_name"></span></p>
+        <p><strong>Email:</strong> <span id="confirm_email"></span></p>
+        <button onclick="handleSendCode()">Yes, it's me! Send Code</button>
+        <button onclick="showPhase(1)">Change ID</button>
+        <div id="p2_message" class="error"></div>
+        
+        <div id="otp_section" style="display:none; margin-top: 20px;">
+            <p>Enter the 6-digit verification code sent to your email.</p>
+            <input type="text" id="otpInput" placeholder="Enter OTP" required>
+            <button onclick="handleOtpVerification()">Verify Code</button>
+            <div id="otp_message" class="error"></div>
+        </div>
+      </div>
+
+      <div id="phase3" style="display:none;">
+        
+        <div id="adminActingBanner" class="admin-banner">
+            ⚠️ <strong>ADMIN MODE:</strong> You are managing assets for <strong id="acting_for_name"></strong> (<span id="acting_for_id"></span>).
+            <br>
+            <button style="background-color: #333; color: #fff; padding: 5px 10px; margin-top: 5px; font-size: 12px;" onclick="exitAdminMode()">Exit / Go Back to My Profile</button>
+        </div>
+
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div>
+                <h3>Welcome, <span id="user_name_display"></span>!</h3>
+                <p>User Type: <strong id="user_type_display"></strong></p> 
+            </div>
+            <button onclick="logout()" style="background-color: #6c757d;">Logout</button>
+        </div>
+
+        <div id="adminPanel" style="display:none; border: 2px dashed #6f42c1; padding: 15px; margin: 15px 0; border-radius: 8px; background-color: #f3e5f5;">
+            <h4 style="color: #6f42c1; border-bottom-color: #d1c4e9;">Admin Controls</h4>
+            <p>Manage another employee's assets?</p>
+            <button class="admin-btn" onclick="openAdminSearchModal()">🔍 Manage Another Employee</button>
+        </div>
+        
+        <hr>
+
+        <div style="margin: 20px 0; text-align: center;">
+            <button class="add-btn" onclick="openAddNewAssetModal()">➕ Add Asset</button>
+        </div>
+
+        <h4>Pending Assets (Action Required)</h4>
+        <div id="pendingAssetContainer" class="asset-list"></div>
+
+        <hr> 
+        
+        <h4>Verified Assets (Up to Date)</h4>
+        <div id="verifiedAssetContainer" class="asset-list"></div>
+      </div>
+
+    </div>
+
+    <div id="verificationModal" class="modal">
+        <div class="modal-content">
+            <h4>Verify Asset: <span id="asset_to_verify"></span></h4>
+            <p>Upload clear photos. Serial Number must be visible!</p>
+            <label>Front Picture:</label>
+            <input type="file" id="frontPic" accept="image/*" required>
+            <label>Back Picture:</label>
+            <input type="file" id="backPic" accept="image/*" required>
+            <button onclick="submitVerification()">Submit Verification</button>
+            <button style="background-color: #6c757d;" onclick="closeModal('verificationModal')">Cancel</button>
+            <div id="verification_message" class="error"></div>
+        </div>
+    </div>
+
+    <div id="disputeModal" class="modal">
+        <div class="modal-content">
+            <h4>Dispute Asset: <span id="asset_to_dispute"></span></h4>
+            <label for="disputeReason">Reason:</label>
+            <select id="disputeReason">
+                <option value="I don't know about this asset">I don't know about this asset</option>
+                <option value="Submitted to IT">Submitted to IT</option>
+                <option value="Missing/Lost">Missing/Lost</option>
+                <option value="Other">Other (Please specify in remarks)</option>
+            </select>
+            <input type="text" id="disputeRemark" placeholder="Optional Remarks">
+            <button style="background-color: #dc3545;" onclick="submitDispute()">Submit Dispute</button>
+            <button style="background-color: #6c757d;" onclick="closeModal('disputeModal')">Cancel</button>
+            <div id="dispute_message" class="error"></div>
+        </div>
+    </div>
+    
+    <div id="addNewAssetModal" class="modal">
+        <div class="modal-content">
+            <h4>Add New Asset</h4>
+            <p>Fill in details and upload proof pictures.</p>
+            <label for="newAssetType">Asset Type:</label>
+            <input type="text" id="newAssetType" placeholder="e.g., Laptop, Keyboard" required>
+            <label for="newAssetSerialNo">Serial Number:</label>
+            <input type="text" id="newAssetSerialNo" placeholder="Enter Serial Number" required>
+            <label for="newAssetCompany">Company:</label>
+            <input type="text" id="newAssetCompany" placeholder="e.g., Dell, HP" required>
+            <label>Front Picture:</label>
+            <input type="file" id="newAssetFrontPic" accept="image/*" required>
+            <label>Back Picture:</label>
+            <input type="file" id="newAssetBackPic" accept="image/*" required>
+            <button class="add-btn" onclick="submitNewAsset()">Submit New Asset</button>
+            <button style="background-color: #6c757d;" onclick="closeModal('addNewAssetModal')">Cancel</button>
+            <div id="new_asset_message" class="error"></div>
+        </div>
+    </div>
+
+    <div id="adminSearchModal" class="modal">
+        <div class="modal-content">
+            <h4>Admin: Manage Employee</h4>
+            <div id="admin_step1">
+                <p>Enter the Employee ID you want to manage:</p>
+                <input type="text" id="adminTargetEmpId" placeholder="Target Employee ID">
+                <button onclick="adminCheckTargetEmp()">Find Employee</button>
+            </div>
+            <div id="admin_step2" style="display:none;">
+                <p><strong>Found:</strong> <span id="admin_target_name"></span></p>
+                <p><strong>Email:</strong> <span id="admin_target_email"></span></p>
+                <button onclick="adminSendOtp()">Send OTP to Employee</button>
+            </div>
+            <div id="admin_step3" style="display:none;">
+                <p>Enter the OTP sent to <span id="admin_target_email_disp"></span>:</p>
+                <input type="text" id="adminTargetOtp" placeholder="6-digit OTP">
+                <button onclick="adminVerifyTargetOtp()">Verify & Access</button>
+            </div>
+            <div id="admin_msg" class="error"></div>
+            <br>
+            <button style="background-color: #6c757d;" onclick="closeModal('adminSearchModal')">Cancel</button>
+        </div>
+    </div>
+
+    <script>
+      // !!! IMPORTANT !!! PASTE YOUR APPS SCRIPT WEB APP URL HERE
+      const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxZpL9D78TWaZw2CltEt48S49bBdX3iGpJ8nJSJFLhsOhzul0vlLl5WdDVC0RZtbpMW8g/exec";
+
+      // Global Variables
+      let loggedInEmpId = '';
+      let loggedInUserName = '';
+      let loggedInUserRole = '';
+      let currentEmpId = '';
+      let targetEmpData = null;
+      let currentAssetToVerify = null;
+      let currentAssetToDispute = null;
+
+      function showLoading(show) {
+          document.getElementById('loadingOverlay').style.display = show ? 'block' : 'none';
+      }
+
+      /* --- NEW API HELPER (REPLACES google.script.run) --- */
+      async function apiCall(action, payload = {}) {
+        showLoading(true);
+        try {
+            // We use 'no-cors' strictly is tricky because we can't read response
+            // We use standard POST with text/plain to avoid preflight options check
+            const response = await fetch(SCRIPT_URL, {
+                method: "POST",
+                body: JSON.stringify({ action: action, ...payload })
+                // Note: Not setting Content-Type to application/json specifically to avoid CORS Preflight issues in some browsers with GAS
+            });
+            
+            const data = await response.json();
+            showLoading(false);
+            return data;
+        } catch (error) {
+            showLoading(false);
+            console.error("API Error:", error);
+            return { success: false, message: "Connection Failed: " + error.message };
+        }
+      }
+
+      /* --- NAVIGATION & SETUP --- */
+      function showPhase(phase) {
+        document.getElementById('phase1').style.display = 'none';
+        document.getElementById('phase2').style.display = 'none';
+        document.getElementById('phase3').style.display = 'none';
+        if (phase === 1) document.getElementById('phase1').style.display = 'block';
+        if (phase === 2) document.getElementById('phase2').style.display = 'block';
+        if (phase === 3) document.getElementById('phase3').style.display = 'block';
+      }
+
+      /* --- PHASE 1: LOGIN CHECK --- */
+      async function handleEmpIdCheck() {
+        const empId = document.getElementById('empIdInput').value.trim();
+        const msgDiv = document.getElementById('p1_message');
+        msgDiv.textContent = '';
+
+        if (!empId) { msgDiv.textContent = 'Please enter Emp ID.'; return; }
+
+        const response = await apiCall('checkEmpId', { empId: empId });
+        
+        if (response.success) {
+            loggedInEmpId = response.empId;
+            loggedInUserName = response.name;
+            document.getElementById('confirm_name').textContent = response.name;
+            document.getElementById('confirm_email').textContent = response.email;
+            showPhase(2);
+        } else {
+            msgDiv.textContent = response.message;
+        }
+      }
+
+      /* --- PHASE 2: SEND OTP --- */
+      async function handleSendCode() {
+        const email = document.getElementById('confirm_email').textContent;
+        const msgDiv = document.getElementById('p2_message');
+        msgDiv.textContent = '';
+        
+        const response = await apiCall('sendVerificationCode', { email: email, empId: loggedInEmpId });
+        
+        if(response.success) {
+            msgDiv.textContent = 'Code sent!';
+            msgDiv.className = 'success';
+            document.getElementById('otp_section').style.display = 'block';
+        } else {
+            msgDiv.textContent = response.message;
+        }
+      }
+      
+      /* --- PHASE 2: VERIFY OTP --- */
+      async function handleOtpVerification() {
+        const otp = document.getElementById('otpInput').value.trim();
+        const msgDiv = document.getElementById('otp_message');
+        if (!otp) { msgDiv.textContent = 'Enter OTP'; return; }
+
+        const response = await apiCall('verifyOtp', { empId: loggedInEmpId, otp: otp });
+
+        if (response.success) {
+             loggedInUserRole = response.userType;
+             currentEmpId = loggedInEmpId;
+             document.getElementById('user_name_display').textContent = loggedInUserName;
+             document.getElementById('user_type_display').textContent = loggedInUserRole;
+             
+             document.getElementById('adminPanel').style.display = (loggedInUserRole === 'Admin') ? 'block' : 'none';
+             
+             showPhase(3);
+             loadAssets();
+        } else {
+             msgDiv.textContent = response.message;
+        }
+      }
+
+      /* --- ADMIN LOGIC --- */
+      function openAdminSearchModal() {
+          document.getElementById('adminSearchModal').style.display = 'block';
+          document.getElementById('adminTargetEmpId').value = '';
+          document.getElementById('admin_msg').textContent = '';
+          document.getElementById('admin_step1').style.display = 'block';
+          document.getElementById('admin_step2').style.display = 'none';
+          document.getElementById('admin_step3').style.display = 'none';
+      }
+
+      async function adminCheckTargetEmp() {
+          const targetId = document.getElementById('adminTargetEmpId').value.trim();
+          const msgDiv = document.getElementById('admin_msg');
+          if(!targetId) { msgDiv.textContent = "Enter ID"; return; }
+          
+          const response = await apiCall('checkEmpId', { empId: targetId });
+          
+          if(response.success) {
+              targetEmpData = response;
+              document.getElementById('admin_target_name').textContent = response.name;
+              document.getElementById('admin_target_email').textContent = response.email;
+              document.getElementById('admin_step1').style.display = 'none';
+              document.getElementById('admin_step2').style.display = 'block';
+          } else {
+              msgDiv.textContent = "User not found.";
+          }
+      }
+
+      async function adminSendOtp() {
+          const msgDiv = document.getElementById('admin_msg');
+          const response = await apiCall('sendVerificationCode', { email: targetEmpData.email, empId: targetEmpData.empId });
+          
+          if(response.success) {
+              document.getElementById('admin_target_email_disp').textContent = targetEmpData.email;
+              document.getElementById('admin_step2').style.display = 'none';
+              document.getElementById('admin_step3').style.display = 'block';
+          } else {
+              msgDiv.textContent = "Error sending OTP.";
+          }
+      }
+
+      async function adminVerifyTargetOtp() {
+          const otp = document.getElementById('adminTargetOtp').value.trim();
+          const msgDiv = document.getElementById('admin_msg');
+          
+          const response = await apiCall('verifyOtp', { empId: targetEmpData.empId, otp: otp });
+          
+          if(response.success) {
+              currentEmpId = targetEmpData.empId;
+              document.getElementById('adminActingBanner').style.display = 'block';
+              document.getElementById('acting_for_name').textContent = targetEmpData.name;
+              document.getElementById('acting_for_id').textContent = targetEmpData.empId;
+              document.getElementById('adminPanel').style.display = 'none';
+              closeModal('adminSearchModal');
+              loadAssets();
+              alert("You are now managing assets for: " + targetEmpData.name);
+          } else {
+              msgDiv.textContent = "Invalid OTP.";
+          }
+      }
+
+      function exitAdminMode() {
+          currentEmpId = loggedInEmpId;
+          document.getElementById('adminActingBanner').style.display = 'none';
+          document.getElementById('adminPanel').style.display = 'block';
+          loadAssets();
+      }
+
+      /* --- ASSET MANAGEMENT --- */
+      async function loadAssets() {
+        // Clear containers
+        document.getElementById('pendingAssetContainer').innerHTML = 'Loading...';
+        document.getElementById('verifiedAssetContainer').innerHTML = 'Loading...';
+
+        // Load Pending
+        const pending = await apiCall('getPendingAssets', { empId: currentEmpId });
+        renderPendingAssets(pending);
+
+        // Load Verified
+        const verified = await apiCall('getVerifiedAssets', { empId: currentEmpId });
+        renderVerifiedAssets(verified);
+      }
+
+      function renderPendingAssets(assets) {
+        const container = document.getElementById('pendingAssetContainer');
+        container.innerHTML = '';
+        if (!assets || assets.length === 0) { container.innerHTML = '<p>🎉 No pending assets.</p>'; return; }
+        
+        assets.forEach(asset => {
+             const div = document.createElement('div');
+             div.className = 'card';
+             div.innerHTML = `
+               <p><strong>ID:</strong> ${asset.AssetID} | <strong>Type:</strong> ${asset.AssetType}</p>
+               <p><strong>Serial:</strong> ${asset.SerialNumber}</p>
+               <button onclick="openVerificationModal('${asset.AssetID}', ${asset.RowIndex})">Verify</button>
+               <button style="background-color: #dc3545;" onclick="openDisputeModal('${asset.AssetID}', ${asset.RowIndex})">Dispute</button>
+             `;
+             container.appendChild(div);
+        });
+      }
+
+      function renderVerifiedAssets(assets) {
+        const container = document.getElementById('verifiedAssetContainer');
+        container.innerHTML = '';
+        if (!assets || assets.length === 0) { container.innerHTML = '<p>No verified assets.</p>'; return; }
+        
+        assets.forEach(asset => {
+             const div = document.createElement('div');
+             div.className = 'card verified-card';
+             div.innerHTML = `
+                 <p>✅ <strong>ID:</strong> ${asset.AssetID}</p>
+                 <p><strong>Type:</strong> ${asset.AssetType} | <strong>Serial:</strong> ${asset.SerialNumber}</p>
+                 <p><strong>Date:</strong> ${asset.LastVerifiedDate}</p>
+                 <p><a href="${asset.FrontURL}" target="_blank">Front Pic</a> | <a href="${asset.BackURL}" target="_blank">Back Pic</a></p>
+             `;
+             container.appendChild(div);
+        });
+      }
+
+      /* --- MODALS & FILES --- */
+      function openVerificationModal(id, idx) {
+        currentAssetToVerify = { id: id, rowIndex: idx };
+        document.getElementById('asset_to_verify').textContent = id;
+        document.getElementById('verificationModal').style.display = 'block';
+      }
+      
+      function openDisputeModal(id, idx) {
+        currentAssetToDispute = { id: id, rowIndex: idx };
+        document.getElementById('asset_to_dispute').textContent = id;
+        document.getElementById('disputeModal').style.display = 'block';
+      }
+
+      function openAddNewAssetModal() { document.getElementById('addNewAssetModal').style.display = 'block'; }
+      function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+
+      function fileToBase64(file) {
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.readAsDataURL(file);
+          reader.onload = () => resolve(reader.result);
+          reader.onerror = error => reject(error);
+        });
+      }
+
+      /* --- SUBMISSIONS --- */
+      async function submitVerification() {
+        const f = document.getElementById('frontPic').files[0];
+        const b = document.getElementById('backPic').files[0];
+        const msg = document.getElementById('verification_message');
+        if(!f || !b) { msg.textContent = 'Both pics required.'; return; }
+        
+        try {
+            const fD = await fileToBase64(f);
+            const bD = await fileToBase64(b);
+            const res = await apiCall('verifyAsset', { 
+                assetId: currentAssetToVerify.id, 
+                rowIndex: currentAssetToVerify.rowIndex, 
+                frontPic: fD, 
+                backPic: bD 
+            });
+            
+            if(res.success) {
+                alert(res.message);
+                closeModal('verificationModal');
+                loadAssets();
+            } else {
+                msg.textContent = res.message;
+            }
+        } catch(e) { msg.textContent = e; }
+      }
+
+      async function submitDispute() {
+        const r = document.getElementById('disputeReason').value;
+        const rem = document.getElementById('disputeRemark').value;
+        const res = await apiCall('disputeAsset', { 
+            rowIndex: currentAssetToDispute.rowIndex, 
+            reason: r, 
+            remark: rem 
+        });
+        if(res.success) {
+            alert(res.message);
+            closeModal('disputeModal');
+            loadAssets();
+        } else {
+            document.getElementById('dispute_message').textContent = res.message;
+        }
+      }
+
+      async function submitNewAsset() {
+        const t = document.getElementById('newAssetType').value;
+        const s = document.getElementById('newAssetSerialNo').value;
+        const c = document.getElementById('newAssetCompany').value;
+        const f = document.getElementById('newAssetFrontPic').files[0];
+        const b = document.getElementById('newAssetBackPic').files[0];
+        const msg = document.getElementById('new_asset_message');
+
+        if(!t || !s || !c || !f || !b) { msg.textContent = 'All fields required.'; return; }
+        
+        try {
+            const fD = await fileToBase64(f);
+            const bD = await fileToBase64(b);
+            const res = await apiCall('addNewAsset', {
+                empId: currentEmpId,
+                assetType: t,
+                serialNumber: s,
+                company: c,
+                frontPic: fD,
+                backPic: bD
+            });
+            if(res.success) {
+                alert(res.message);
+                closeModal('addNewAssetModal');
+                loadAssets();
+            } else {
+                msg.textContent = res.message;
+            }
+        } catch(e) { msg.textContent = e; }
+      }
+
+      function logout() {
+          loggedInEmpId = ''; loggedInUserRole = ''; currentEmpId = '';
+          location.reload(); 
+      }
+      
+      document.addEventListener('DOMContentLoaded', () => showPhase(1));
+    </script>
+  </body>
+</html>
