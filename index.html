@@ -204,7 +204,7 @@
         <div id="p1_message" class="error"></div>
       </div>
 
-      <div id="phase2" style="display:none;">
+      <!-- <div id="phase2" style="display:none;">
         <div class="card">
             <h4 style="margin-top:0;">Confirm Details</h4>
             <p><strong>Name:</strong> <span id="confirm_name"></span></p>
@@ -212,6 +212,27 @@
         </div>
         
         <button onclick="handleSendCode()">Yes, send me Code</button>
+        <button class="cancel-btn" onclick="showPhase(1)">Back</button>
+        <div id="p2_message" class="error"></div>
+        
+        <div id="otp_section" style="display:none; margin-top: 25px; border-top: 1px solid #eee; padding-top: 15px;">
+            <p style="text-align: center;">Enter 6-digit OTP sent to email</p>
+            <input type="text" id="otpInput" placeholder="000000" style="text-align: center; letter-spacing: 5px; font-size: 20px;" inputmode="numeric" pattern="[0-9]*">
+            <button onclick="handleOtpVerification()">Verify & Login</button>
+            <div id="otp_message" class="error"></div>
+        </div>
+      </div> -->
+
+      <div id="phase2" style="display:none;">
+        <div class="card">
+            <h4 style="margin-top:0;">Confirm Details</h4>
+            <p><strong>Name:</strong> <span id="confirm_name"></span></p>
+            <p><strong>Email:</strong> <span id="confirm_email"></span></p>
+        </div>
+        
+        <button id="sendCodeBtn" onclick="handleSendCode()">Yes, send me Code</button>
+        <p id="timer_display" style="text-align: center; font-size: 14px; color: #dc3545; display: none; margin-top: 5px;"></p>
+        
         <button class="cancel-btn" onclick="showPhase(1)">Back</button>
         <div id="p2_message" class="error"></div>
         
@@ -463,9 +484,33 @@
         }
       }
 
+      // async function handleSendCode() {
+      //   const email = document.getElementById('confirm_email').textContent;
+      //   const msgDiv = document.getElementById('p2_message');
+        
+      //   showLoading(true, "Sending Verification Code...", "Please check your email shortly.");
+        
+      //   const response = await apiCall('sendVerificationCode', { email: email, empId: loggedInEmpId });
+      //   showLoading(false);
+
+      //   if(response.success) {
+      //       msgDiv.textContent = 'Code sent to email!';
+      //       msgDiv.className = 'success';
+      //       document.getElementById('otp_section').style.display = 'block';
+      //   } else {
+      //       msgDiv.textContent = response.message;
+      //   }
+      // }
+
+      /* --- TIMER VARIABLE --- */
+      
+      let countdownInterval;
+
+      /* --- UPDATED LOGIC: SEND CODE WITH TIMER --- */
       async function handleSendCode() {
         const email = document.getElementById('confirm_email').textContent;
         const msgDiv = document.getElementById('p2_message');
+        const sendBtn = document.getElementById('sendCodeBtn'); // Make sure button has this ID
         
         showLoading(true, "Sending Verification Code...", "Please check your email shortly.");
         
@@ -476,9 +521,46 @@
             msgDiv.textContent = 'Code sent to email!';
             msgDiv.className = 'success';
             document.getElementById('otp_section').style.display = 'block';
+            
+            // START THE TIMER (60 Seconds)
+            startTimer(60, sendBtn);
+            
         } else {
             msgDiv.textContent = response.message;
+            msgDiv.className = 'error';
         }
+      }
+
+      /* --- NEW FUNCTION: TIMER LOGIC --- */
+      function startTimer(duration, buttonElement) {
+          let timer = duration;
+          const display = document.getElementById('timer_display');
+          
+          // Disable button and show timer text
+          buttonElement.disabled = true;
+          buttonElement.style.backgroundColor = "#ccc"; // Grey out button
+          buttonElement.style.cursor = "not-allowed";
+          display.style.display = "block";
+          
+          clearInterval(countdownInterval); // Clear any existing timer
+          
+          countdownInterval = setInterval(function () {
+              const minutes = parseInt(timer / 60, 10);
+              const seconds = parseInt(timer % 60, 10);
+
+              const secStr = seconds < 10 ? "0" + seconds : seconds;
+              display.textContent = `Resend available in ${minutes}:${secStr}`;
+
+              if (--timer < 0) {
+                  // Timer Finished
+                  clearInterval(countdownInterval);
+                  display.style.display = "none";
+                  buttonElement.disabled = false;
+                  buttonElement.textContent = "Resend Code";
+                  buttonElement.style.backgroundColor = "#007bff"; // Restore color
+                  buttonElement.style.cursor = "pointer";
+              }
+          }, 1000);
       }
       
       async function handleOtpVerification() {
