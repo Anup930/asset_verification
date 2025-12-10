@@ -1,4 +1,4 @@
-<!-- V1.6.9 -->
+<!-- V 2.1.3 -->
 
 <!DOCTYPE html>
 <html>
@@ -130,20 +130,50 @@
           box-shadow: 0 10px 25px rgba(0,0,0,0.2);
       }
       
-      /* --- LOADING OVERLAY --- */
+      /* --- LOADING OVERLAY & ANIMATION --- */
       #loadingOverlay { 
           display:none; 
           position: fixed; 
           top:0; left:0; 
           width:100%; height:100%; 
-          background:rgba(255,255,255,0.9); 
+          background:rgba(255,255,255,0.95); 
           z-index:2000; 
           text-align: center; 
-          padding-top: 50vh; 
+          padding-top: 40vh; 
           margin-top: -40px;
           font-size: 1.2rem; 
           font-weight: bold; 
           color: #007bff; 
+          transition: all 0.3s ease;
+      }
+
+      /* Spinner Animation */
+      .spinner {
+        border: 5px solid #f3f3f3;
+        border-top: 5px solid #007bff;
+        border-radius: 50%;
+        width: 50px;
+        height: 50px;
+        animation: spin 1s linear infinite;
+        margin: 0 auto 20px auto;
+      }
+
+      @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+
+      .loading-text {
+        padding: 0 20px;
+        line-height: 1.6;
+      }
+
+      .loading-subtext {
+        display: block;
+        margin-top: 10px;
+        font-size: 14px; 
+        color: #666; 
+        font-weight: normal;
       }
 
       /* --- MEDIA QUERIES (TABLET & DESKTOP) --- */
@@ -159,8 +189,9 @@
   </head>
   <body>
     <div id="loadingOverlay">
-        <div style="margin-bottom: 10px;">⏳</div>
-        Processing...<br><span style="font-size: 14px; color: #666; font-weight: normal;">Uploading images takes time.</span>
+        <div class="spinner"></div>
+        <div id="loadingText" class="loading-text">Processing...</div>
+        <span id="loadingSubText" class="loading-subtext">Please wait</span>
     </div>
 
     <div class="container">
@@ -324,8 +355,6 @@
 
     <script>
       // !!! PASTE YOUR APPS SCRIPT WEB APP URL HERE !!!
-      // IT = https://script.google.com/macros/s/AKfycbxCIkOqC779qpxzcGaqXzo1FkNjf2jCBezepMrUvuaARkfURJQjBIerPk0F49RqQ9xU/exec
-      // Anup = https://script.google.com/macros/s/AKfycbxZpL9D78TWaZw2CltEt48S49bBdX3iGpJ8nJSJFLhsOhzul0vlLl5WdDVC0RZtbpMW8g/exec
       const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxCIkOqC779qpxzcGaqXzo1FkNjf2jCBezepMrUvuaARkfURJQjBIerPk0F49RqQ9xU/exec";
 
       /* --- GLOBAL VARS --- */
@@ -337,23 +366,40 @@
       let currentAssetToVerify = null;
       let currentAssetToDispute = null;
 
-      /* --- API HELPER --- */
-      function showLoading(show) {
-          document.getElementById('loadingOverlay').style.display = show ? 'block' : 'none';
+      /* --- API HELPER & ANIMATION LOGIC --- */
+      
+      // Updated function to show/hide loader with specific text
+      function showLoading(show, mainText = "Processing...", subText = "") {
+          const overlay = document.getElementById('loadingOverlay');
+          const txtDiv = document.getElementById('loadingText');
+          const subTxtDiv = document.getElementById('loadingSubText');
+          
+          if(show) {
+              txtDiv.innerHTML = mainText;
+              subTxtDiv.innerHTML = subText;
+              overlay.style.display = 'block';
+          } else {
+              overlay.style.display = 'none';
+          }
+      }
+
+      // Helper to update text while loading is already open
+      function updateLoadingText(mainText, subText = "") {
+        document.getElementById('loadingText').innerHTML = mainText;
+        document.getElementById('loadingSubText').innerHTML = subText;
       }
 
       async function apiCall(action, payload = {}) {
-        showLoading(true);
+        // Note: We don't call showLoading here automatically anymore 
+        // because we want custom messages for each button.
         try {
             const response = await fetch(SCRIPT_URL, {
                 method: "POST",
                 body: JSON.stringify({ action: action, ...payload })
             });
             const data = await response.json();
-            showLoading(false);
             return data;
         } catch (error) {
-            showLoading(false);
             console.error("API Error:", error);
             return { success: false, message: "Connection Error. Check internet." };
         }
@@ -369,20 +415,50 @@
         if (phase === 3) document.getElementById('phase3').style.display = 'block';
       }
 
-      /* --- LOGIC: LOGIN --- */
+      /* --- LOGIC: LOGIN (WITH STORYTELLING) --- */
       async function handleEmpIdCheck() {
         const empId = document.getElementById('empIdInput').value.trim();
         const msgDiv = document.getElementById('p1_message');
         msgDiv.textContent = '';
+        
         if (!empId) { msgDiv.textContent = 'Enter ID'; return; }
+
+        // --- STORYTELLING ANIMATION START ---
+        
+        // Step 1: Sending request
+        showLoading(true, "We have Sent you ID to Gretex DB...", "Please wait...");
+        
+        // Artificial delay for effect (1 second)
+        await new Promise(r => setTimeout(r, 1000));
+
+        // Step 2: Reading DB
+        updateLoadingText("We are reading your data in DB...", "Searching records...");
+        
+        // Actual API Call
         const response = await apiCall('checkEmpId', { empId: empId });
+        
         if (response.success) {
+            // Step 3: Success Message
+            updateLoadingText("Congratulations! We have found your Detail in DB.", "Redirecting to confirmation...");
+            
+            // Wait 1.5 seconds so user can read the success message
+            await new Promise(r => setTimeout(r, 1500));
+            
+            showLoading(false); // Hide Loader
+            
             loggedInEmpId = response.empId;
             loggedInUserName = response.name;
             document.getElementById('confirm_name').textContent = response.name;
             document.getElementById('confirm_email').textContent = response.email;
             showPhase(2);
         } else {
+            // Step 3: Failure Message
+            updateLoadingText("Oh oh, we have not found any data related to your Emp ID.", "Make sure you are a Gretex Employee.<br>Kindly connect to IT Team.");
+            
+            // Wait 3 seconds so user can read the error
+            await new Promise(r => setTimeout(r, 3000));
+            
+            showLoading(false); // Hide Loader
             msgDiv.textContent = response.message;
         }
       }
@@ -390,7 +466,12 @@
       async function handleSendCode() {
         const email = document.getElementById('confirm_email').textContent;
         const msgDiv = document.getElementById('p2_message');
+        
+        showLoading(true, "Sending Verification Code...", "Please check your email shortly.");
+        
         const response = await apiCall('sendVerificationCode', { email: email, empId: loggedInEmpId });
+        showLoading(false);
+
         if(response.success) {
             msgDiv.textContent = 'Code sent to email!';
             msgDiv.className = 'success';
@@ -404,7 +485,13 @@
         const otp = document.getElementById('otpInput').value.trim();
         const msgDiv = document.getElementById('otp_message');
         if (!otp) { msgDiv.textContent = 'Enter OTP'; return; }
+        
+        showLoading(true, "Verifying OTP...", "Logging you in...");
+
         const response = await apiCall('verifyOtp', { empId: loggedInEmpId, otp: otp });
+        
+        showLoading(false);
+
         if (response.success) {
              loggedInUserRole = response.userType;
              currentEmpId = loggedInEmpId;
@@ -423,6 +510,7 @@
         document.getElementById('pendingAssetContainer').innerHTML = '<p style="text-align:center;">Loading...</p>';
         document.getElementById('verifiedAssetContainer').innerHTML = '<p style="text-align:center;">Loading...</p>';
         
+        // Use simpler api call without blocking full screen for loading assets
         const pending = await apiCall('getPendingAssets', { empId: currentEmpId });
         renderPendingAssets(pending);
 
@@ -516,6 +604,9 @@
         
         if(!f || !b) { msg.textContent = 'Please attach both photos.'; return; }
         
+        // Show specific loading message
+        showLoading(true, "Uploading Photos...", "This may take a moment depending on internet speed.");
+
         try {
             const fD = await fileToBase64(f);
             const bD = await fileToBase64(b);
@@ -525,6 +616,9 @@
                 frontPic: fD, 
                 backPic: bD 
             });
+            
+            showLoading(false);
+
             if(res.success) {
                 alert("Success: " + res.message);
                 closeModal('verificationModal');
@@ -532,17 +626,26 @@
             } else {
                 msg.textContent = res.message;
             }
-        } catch(e) { msg.textContent = "Error processing images."; }
+        } catch(e) { 
+            showLoading(false);
+            msg.textContent = "Error processing images."; 
+        }
       }
 
       async function submitDispute() {
         const r = document.getElementById('disputeReason').value;
         const rem = document.getElementById('disputeRemark').value;
+        
+        showLoading(true, "Submitting Dispute...", "Updating records...");
+
         const res = await apiCall('disputeAsset', { 
             rowIndex: currentAssetToDispute.rowIndex, 
             reason: r, 
             remark: rem 
         });
+        
+        showLoading(false);
+
         if(res.success) {
             alert(res.message);
             closeModal('disputeModal');
@@ -563,6 +666,8 @@
 
         if(!t || !s || !c || !f || !b) { msg.textContent = 'All fields and photos are required.'; return; }
         
+        showLoading(true, "Adding New Asset...", "Uploading photos and creating records...");
+
         try {
             const fD = await fileToBase64(f);
             const bD = await fileToBase64(b);
@@ -574,6 +679,9 @@
                 frontPic: fD,
                 backPic: bD
             });
+            
+            showLoading(false);
+
             if(res.success) {
                 alert(res.message);
                 closeModal('addNewAssetModal');
@@ -581,7 +689,10 @@
             } else {
                 msg.textContent = res.message;
             }
-        } catch(e) { msg.textContent = e; }
+        } catch(e) { 
+            showLoading(false);
+            msg.textContent = e; 
+        }
       }
 
       /* --- LOGIC: ADMIN --- */
@@ -598,7 +709,13 @@
           const targetId = document.getElementById('adminTargetEmpId').value.trim();
           const msgDiv = document.getElementById('admin_msg');
           if(!targetId) { msgDiv.textContent = "Enter ID"; return; }
+          
+          showLoading(true, "Searching Employee...", "Looking up ID in database...");
+
           const response = await apiCall('checkEmpId', { empId: targetId });
+          
+          showLoading(false);
+
           if(response.success) {
               targetEmpData = response;
               document.getElementById('admin_target_name').textContent = response.name;
@@ -612,7 +729,13 @@
 
       async function adminSendOtp() {
           const msgDiv = document.getElementById('admin_msg');
+          
+          showLoading(true, "Sending OTP...", "Emailing target employee...");
+
           const response = await apiCall('sendVerificationCode', { email: targetEmpData.email, empId: targetEmpData.empId });
+          
+          showLoading(false);
+
           if(response.success) {
               document.getElementById('admin_step2').style.display = 'none';
               document.getElementById('admin_step3').style.display = 'block';
@@ -624,7 +747,13 @@
       async function adminVerifyTargetOtp() {
           const otp = document.getElementById('adminTargetOtp').value.trim();
           const msgDiv = document.getElementById('admin_msg');
+          
+          showLoading(true, "Verifying OTP...", "Accessing employee profile...");
+
           const response = await apiCall('verifyOtp', { empId: targetEmpData.empId, otp: otp });
+          
+          showLoading(false);
+
           if(response.success) {
               currentEmpId = targetEmpData.empId;
               document.getElementById('adminActingBanner').style.display = 'block';
