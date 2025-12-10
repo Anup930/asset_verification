@@ -281,7 +281,7 @@
 
     </div>
 
-    <div id="verificationModal" class="modal">
+    <!-- <div id="verificationModal" class="modal">
         <div class="modal-content">
             <h4 style="margin-top:0;">Verify Asset</h4>
             <p style="background: #e9ecef; padding: 10px; border-radius: 4px;"><strong>ID:</strong> <span id="asset_to_verify"></span></p>
@@ -295,6 +295,31 @@
             <input type="file" id="backPic" accept="image/*" capture="environment" required>
             
             <button onclick="submitVerification()">Submit Verification</button>
+            <button class="cancel-btn" onclick="closeModal('verificationModal')">Cancel</button>
+            <div id="verification_message" class="error"></div>
+        </div>
+    </div> -->
+
+    <div id="verificationModal" class="modal">
+        <div class="modal-content">
+            <h4 style="margin-top:0;">Verify Asset</h4>
+            <p style="background: #e9ecef; padding: 10px; border-radius: 4px;"><strong>ID:</strong> <span id="asset_to_verify"></span></p>
+            
+            <p style="font-size: 0.9rem; color: #555; margin-bottom: 20px;">📸 <strong>Camera:</strong> Tapping below will open your camera.</p>
+
+            <label>Front Photo:</label>
+            <div style="background-color: #fff3cd; color: #856404; padding: 8px; border-radius: 4px; font-size: 0.85rem; margin-bottom: 8px; border-left: 4px solid #ffeeba;">
+               ⚠️ <strong>Note:</strong> Serial Number must be clearly visible on the screen/device.
+            </div>
+            <input type="file" id="frontPic" accept="image/*" capture="environment" required>
+            
+            <label style="margin-top: 15px; display:block;">Back Photo (Sticker):</label>
+             <div style="background-color: #d1ecf1; color: #0c5460; padding: 8px; border-radius: 4px; font-size: 0.85rem; margin-bottom: 8px; border-left: 4px solid #bee5eb;">
+               ℹ️ <strong>Note:</strong> The Company Sticker/Label must be clearly visible.
+            </div>
+            <input type="file" id="backPic" accept="image/*" capture="environment" required>
+            
+            <button onclick="submitVerification()" style="margin-top: 20px;">Submit Verification</button>
             <button class="cancel-btn" onclick="closeModal('verificationModal')">Cancel</button>
             <div id="verification_message" class="error"></div>
         </div>
@@ -600,6 +625,28 @@
         renderVerifiedAssets(verified);
       }
 
+      // function renderPendingAssets(assets) {
+      //   const container = document.getElementById('pendingAssetContainer');
+      //   container.innerHTML = '';
+      //   if (!assets || assets.length === 0) { 
+      //       container.innerHTML = '<div class="card" style="text-align:center; color:#28a745;">🎉 All caught up! No pending assets.</div>'; 
+      //       return; 
+      //   }
+      //   assets.forEach(asset => {
+      //        const div = document.createElement('div');
+      //        div.className = 'card';
+      //        div.innerHTML = `
+      //          <p><strong>${asset.AssetType}</strong></p>
+      //          <p style="font-size: 0.9rem; color: #666;">ID: ${asset.AssetID} <br> Serial: ${asset.SerialNumber}</p>
+      //          <div class="card-actions">
+      //              <button onclick="openVerificationModal('${asset.AssetID}', ${asset.RowIndex})">Verify</button>
+      //              <button class="dispute-btn" onclick="openDisputeModal('${asset.AssetID}', ${asset.RowIndex})">Dispute</button>
+      //          </div>
+      //        `;
+      //        container.appendChild(div);
+      //   });
+      // }
+
       function renderPendingAssets(assets) {
         const container = document.getElementById('pendingAssetContainer');
         container.innerHTML = '';
@@ -610,9 +657,16 @@
         assets.forEach(asset => {
              const div = document.createElement('div');
              div.className = 'card';
+             // UPDATED HTML BELOW: Added Company Name
              div.innerHTML = `
-               <p><strong>${asset.AssetType}</strong></p>
-               <p style="font-size: 0.9rem; color: #666;">ID: ${asset.AssetID} <br> Serial: ${asset.SerialNumber}</p>
+               <div style="display:flex; justify-content:space-between; align-items:center;">
+                   <p style="margin:0; font-size: 1.1rem;"><strong>${asset.AssetType}</strong></p>
+                   <span style="background:#e3f2fd; color:#0d47a1; padding:2px 8px; border-radius:10px; font-size:0.8rem; font-weight:bold;">${asset.Company || 'N/A'}</span>
+               </div>
+               <p style="font-size: 0.9rem; color: #666; margin-top:5px;">
+                   ID: ${asset.AssetID} <br> 
+                   Serial: ${asset.SerialNumber}
+               </p>
                <div class="card-actions">
                    <button onclick="openVerificationModal('${asset.AssetID}', ${asset.RowIndex})">Verify</button>
                    <button class="dispute-btn" onclick="openDisputeModal('${asset.AssetID}', ${asset.RowIndex})">Dispute</button>
@@ -622,6 +676,7 @@
         });
       }
 
+      
       function renderVerifiedAssets(assets) {
         const container = document.getElementById('verifiedAssetContainer');
         container.innerHTML = '';
